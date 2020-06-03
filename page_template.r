@@ -39,14 +39,27 @@ page_template <- function(file_path = "", orientation="landscape", font_name="Co
 }
 
 
-set_margins <- function(x, margin_top=1, margin_bottom=1, margin_left=.7, margin_right=1, header_height=0.5, footer_height=0.5){
+set_margins <- function(x, margin_top=.5, margin_bottom=.5, margin_left=1, margin_right=1){
+  
+  
+  if (is.na(margin_top) | margin_top < 0 | !is.numeric(margin_top)){
+    stop("ERROR: invalid value for margin_top.")
+  }
+  if (is.na(margin_bottom) | margin_bottom < 0| !is.numeric(margin_bottom)){
+    stop("ERROR: invalid value for margin_bottom.")
+  }
+  if (is.na(margin_left) | margin_left < 0| !is.numeric(margin_left)){
+    stop("ERROR: invalid value for margin_left.")
+  }
+  if (is.na(margin_right) | margin_right < 0| !is.numeric(margin_right)){
+    stop("ERROR: invalid value for margin_right.")
+  }
   
   x$margin_top = margin_top
   x$margin_bottom = margin_bottom
   x$margin_left = margin_left
   x$margin_right = margin_right
-  x$header_height = header_height
-  x$footer_height = footer_height
+
  
   return(x) 
 }
@@ -134,7 +147,9 @@ print.page_template <- function(x, full=FALSE){
   invisible(x)
 }
 
+
 # Page Template Write Functions -------------------------------------------------
+
 
 
 gen_keys <- function(count = 1){
@@ -834,9 +849,40 @@ create_document <- function(x, word_path){
   
   write_lines('<?xml version="1.0" encoding="UTF-8"?>', f)
   
-  xml <- gsub("[\r\n]\\s+", "", '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml" xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se w16cid w16 w16cex wp14">
+  xml <- gsub("[\r\n]\\s+", "", '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" 
+                                  xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" 
+                                  xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" 
+                                  xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" 
+                                  xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" 
+                                  xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" 
+                                  xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" 
+                                  xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" 
+                                  xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" 
+                                  xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" 
+                                  xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" 
+                                  xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" 
+                                  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" 
+                                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+                                  xmlns:o="urn:schemas-microsoft-com:office:office" 
+                                  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" 
+                                  xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w10="urn:schemas-microsoft-com:office:word" 
+                                  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" 
+                                  xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" 
+                                  xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml" 
+                                  xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex" 
+                                  xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" 
+                                  xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" 
+                                  xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" 
+                                  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" 
+                                  xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" 
+                                  xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" 
+                                  xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" 
+                                  xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" 
+                                  xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" 
+                                  mc:Ignorable="w14 w15 w16se w16cid w16 w16cex wp14">
              <w:body>
-                <w:p w14:paraId="61F53360" w14:textId="042DEE32" w:rsidR="001F5D69" w:rsidRPr="0072030C" w:rsidRDefault="001F5D69" w:rsidP="001F5D69">
+                <w:p w14:paraId="61F53360" w14:textId="042DEE32" w:rsidR="001F5D69" w:rsidRPr="0072030C" 
+                     w:rsidRDefault="001F5D69" w:rsidP="001F5D69">
                    <w:pPr>
                       <w:rPr>
                          <w:rFonts w:ascii="{font_name}" w:hAnsi="{font_name}" w:cs="{font_name}"/>
@@ -847,25 +893,30 @@ create_document <- function(x, word_path){
                    <w:headerReference w:type="default" r:id="rId6"/>
                    <w:footerReference w:type="default" r:id="rId7"/>
                    <w:pgSz w:w="{page_width}" w:h="{page_height}" w:orient="{orientation}"/>
-                   <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1008" w:header="720" w:footer="720" w:gutter="0"/>
+                   <w:pgMar w:top="{margin_top}" w:right="{margin_right}" w:bottom="{margin_bottom}" w:left="{margin_left}" 
+                      w:header="{margin_top}" w:footer="{margin_bottom}" w:gutter="0"/>
                    <w:cols w:space="720"/>
                    <w:docGrid w:linePitch="360"/>
                 </w:sectPr>
              </w:body>
           </w:document>')
   
-  pw <- 15840
-  ph <- 12240
+  pw <- 11 * tpi
+  ph <- 8.5 * tpi
   if (x$orientation == "portrait"){
-    pw <- 12240
-    ph <- 15840
+    pw <- 8.5 * tpi
+    ph <- 11 * tpi
   }
   
   xml <- glue(xml, 
               orientation=x$orientation,
               page_height=ph,
               page_width=pw,
-              font_name=x$font_name)
+              font_name=x$font_name,
+              margin_top=x$margin_top * tpi,
+              margin_bottom=x$margin_bottom * tpi, 
+              margin_left=x$margin_left * tpi,
+              margin_right=x$margin_right * tpi)
   
   
   # <w:headerReference w:type="default" r:id="rId6"/>

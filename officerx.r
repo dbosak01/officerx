@@ -179,8 +179,8 @@ use_data_labels <- function(x){
   v2 <- c()
   counter <- 1
   for(col in ds){
-    if (!is.null(get_label(col))){
-      v2 <- c(v2, get_label(col))
+    if (!is.null(attr(col, "label"))){
+      v2 <- c(v2, attr(col, "label"))
     } else {
       if (is.null( names(col))){
         v2 <- c(v2, v1[counter])
@@ -240,7 +240,7 @@ gen_groups <- function(tot, group_cnt, last_indices = FALSE){
   
   # Populate return vector with group values or last indices
   while(cnt <= tot){
-    for(i in 1:length(group_cnt)){
+    for(i in seq_along(group_cnt)){
       for(j in 1:group_cnt[i]){
         
         cnt <- cnt + 1
@@ -290,7 +290,7 @@ split_df_pages <- function(df, rows, cols, idcols = NULL){
   
   # Reapply the labels lost during the split
   data_labeled <- list()
-  for(sds in 1:length(split_data)){
+  for(sds in seq_along(split_data)){
     data_labeled[[sds]] <- copy_labels(split_data[[1]], df)
   }
   

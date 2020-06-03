@@ -41,7 +41,8 @@ cnt_pct <- function(a, b, precision = 0.1, low_threshold = .01, low_label="< 1%"
 }
 
 
-
+#' sex_fmt 
+#' 
 sex_fmt <- Vectorize(function(x){
   
   ret <- ""
