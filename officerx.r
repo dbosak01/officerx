@@ -1,9 +1,10 @@
 library(officer)
 library(flextable)
 library(magrittr)
-library(sjlabelled)
+library(sjlabelled)   # Try to get rid of this dependency. 
 library(dplyr)
-
+library(svglite)
+library(rsvg)
 
 # Flextable and Officer Extended Functions ------------------------------------
 
@@ -22,19 +23,45 @@ theme_normal <- function(x, fontname = "Courier New", fontsize=10){
 }
 
 
-create_report <- function(page_template, object){
+write_report <- function(page_template, object, graphic_type="png"){
   
   # Write out document template
   write_page_template(page_template)
   
-
-  my_doc <- read_docx(page_template$file_path) # %>%
-    #cursor_begin() %>% body_remove() 
-  if (class(object)[1] == "flextable")
-    body_add_flextable(my_doc, object)
-  if (class(object)[1] == "gg")
-    body_add_gg(my_doc, object)
+  my_doc <- read_docx(page_template$file_path) %>%
+            cursor_begin() %>% body_remove()
   
+  ls <- object
+  if (class(object)[1] != "report_content")
+    ls <- list(object)
+  
+  counter <- 1
+  
+  for(o in ls){
+  
+    if (class(o)[1] == "table_spec"){
+      ft <- create_flextable(o) %>%
+            theme_normal(fontname = page_template$font_name) 
+      my_doc <- body_add_flextable(my_doc, ft)
+    }
+    else if (class(o)[1] == "flextable"){
+      ft <- theme_normal(o, fontname = page_template$font_name) 
+      my_doc <- body_add_flextable(my_doc, ft)
+    }
+    else if (class(o)[1] == "gg" & graphic_type=="png"){
+      my_doc <- body_add_gg(my_doc, o)
+    }
+    else if (class(o)[1] == "gg" & graphic_type=="svg"){
+      my_doc <- body_add_gg_svg(my_doc, o)
+    }
+    else if (class(o)[1] == "character" & o == "page_break"){
+      
+      if (counter < length(ls))
+        my_doc <- body_add_break(my_doc)
+    }
+    counter <- counter + 1
+  }
+    
   print(my_doc, target = page_template$file_path)
   
   
@@ -47,6 +74,21 @@ create_report <- function(page_template, object){
 }
 
 
+body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style = "Normal", ... ){
+  
+  if( !requireNamespace("ggplot2") )
+    stop("package ggplot2 is required to use this function")
+  
+  stopifnot(inherits(value, "gg") )
+  file_path <- tempfile(fileext = ".svg")
+  print(file_path)
+
+  ggsave(file=file_path, plot=value, width=width, height=height, dpi=res)
+
+  body_add_img(x, src = file_path, style = style, width = width, height = height)
+  
+  unlink(file_path)
+}
 
 
 #' body_add_flextables  

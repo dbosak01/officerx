@@ -64,20 +64,15 @@ set_margins <- function(x, margin_top=.5, margin_bottom=.5, margin_left=1, margi
   return(x) 
 }
 
-page_header_left <- function(x, values){
+page_header <- function(x, left="", right=""){
   
-  x$page_header_left <- values
+  x$page_header_left <- left
+  x$page_header_right <- right
   
   return(x)
 }
 
 
-page_header_right <- function(x, values){
-  
-  x$page_header_right <- values
-  
-  return(x)
-}
 
 titles <- function(x, values, in_body = FALSE, align="center"){
   
@@ -106,35 +101,16 @@ footnotes <- function(x, values, in_body = FALSE, align = "left"){
 }
 
 
-page_footer_left <- function(x, values){
+page_footer <- function(x, left="", right="", center=""){
   
-  x$page_footer_left <- values
-  
-  return(x)
-}
-
-
-
-page_footer_center <- function(x, values){
-  
-  x$page_footer_center <- values
-  
-  return(x)
-}
-
-page_footer_right <- function(x, values){
-  
-  x$page_footer_right <- values
+  x$page_footer_left <- left
+  x$page_footer_right <- right
+  x$page_footer_center <- center
   
   return(x)
 }
 
 
-add_flextable <- function(x, ft){
-  
-  x$flextable <- ft
-  
-}
 
 
 print.page_template <- function(x, full=FALSE){
@@ -1895,7 +1871,7 @@ write_page_template <- function(x, file_path = ""){
   if (!dir.exists(path_dir))
     dir.create(path_dir)
   
-  print(path_dir)
+  #print(path_dir)
   
   # Create docx directory for document container
   path_docx <- file.path(path_dir, "docx")
