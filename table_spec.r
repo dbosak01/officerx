@@ -69,7 +69,7 @@ create_table <- function(x, n_format = upcase_parens, page_var = NULL) {
   
   return(ret)
   
-}
+  }
 
 
 define <- function(x, var, label = NULL, col_type = NULL, 
