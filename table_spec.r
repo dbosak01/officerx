@@ -1,11 +1,11 @@
 library(flextable)
 library(magrittr)
 
-# Automatic guessing of widths
-# Shorthand for column type: stub, group, analysis
+
+## To Do ##
 # Automatic paging and wrapping
-# Listings in one function call
-# Column names without quotes
+# Spanning header function
+
 # ft <- report_table(final, n_format=NULL, page_var=page) %>%
 #   define(var="variable", label="Variable", align="left", width=1.25, visible=TRUE) %>%
 #   define(var="category", label="", align="left", width=2) %>%
@@ -18,14 +18,14 @@ library(magrittr)
 # Formats ----------------------------------------------------------------------
 
 
-lowcase_parens <- function(x){
+lowcase_parens <- function(x) {
   
   ret <- paste0("(n=", x, ")")
   
   return(ret)
 }
 
-upcase_parens <- function(x){
+upcase_parens <- function(x) {
   
   ret <- paste0("(N=", x, ")")
   
@@ -33,14 +33,14 @@ upcase_parens <- function(x){
   
 }
 
-lowcase_n <- function(x){
+lowcase_n <- function(x) {
   
   ret <- paste0("n=", x)
   
   return(ret)
 }
 
-upcase_n <- function(x){
+upcase_n <- function(x) {
   
   ret <- paste0("N=", x)
   
@@ -50,23 +50,16 @@ upcase_n <- function(x){
 
 # Table Spec Functions ---------------------------------------------------------
 
-table_spec <- function(x, n_format = upcase_parens, page_var = NULL){
+create_table <- function(x, n_format = upcase_parens, page_var = NULL) {
   
   ret <- structure(list(), class = c("table_spec", "list"))
   
-  # if (!orientation %in% c("landscape", "portrait"))
-  # {
-  #   stop(paste("ERROR: orientation parameter on page_template() function is invalid: '", orientation,
-  #              "'\n\tValid values are: 'landscape' or 'portrait'."))
-  #   
-  # } 
-  # 
-  # if (!font_name %in% c("Courier New", "Times New Roman", "Arial", "Calibri"))
-  # {
-  #   stop(paste("ERROR: font_name parameter on page_template() function is invalid: '", font_name, 
-  #              "'\n\tValid values are: 'Arial', 'Calibri', 'Courier New', and 'Times New Roman'.", sep=""))
-  #   
-  # } 
+  if (!"data.frame" %in% class(x)) {
+     stop(paste("ERROR: data parameter 'x' on",
+                 "page_template() function is invalid.", 
+                "\n\tValid values are a data.frame or tibble."))
+  }
+
   
   ret$data <- x
   ret$n_format <- n_format
@@ -79,24 +72,28 @@ table_spec <- function(x, n_format = upcase_parens, page_var = NULL){
 }
 
 
-define <- function(x, var, label = NULL, col_type = NULL, align="center", label_align=NULL, width=1, visible=TRUE, n = NULL){
+define <- function(x, var, label = NULL, col_type = NULL, 
+                   align=NULL, label_align=NULL, width=NULL, 
+                   visible=TRUE, n = NULL) {
   
-  def <- list(var = var, 
+
+  def <- list(var = deparse(substitute(var)), 
               label= label,
               col_type = col_type,
               align = align, 
-              label_align = ifelse(is.null(label_align), align, label_align),
+              label_align = if (is.null(label_align) & !is.null(align)) 
+                                align else label_align,
               width = width, 
               visible = visible, 
               n = n)
-
   
   x$col_defs[[length(x$col_defs) + 1]] <- def
 
   return(x)  
 }
 
-spanning_header <- function(x, span_cols, label = "", label_align = "center", level = 1, n = NULL){
+spanning_header <- function(x, span_cols, label = "", 
+                            label_align = "center", level = 1, n = NULL) {
   
   sh <- list(span_cols = span_cols, 
              label = label, 
@@ -133,11 +130,12 @@ get_labels <- function(dat, defs, nfmt){
   # as the header string.
   v2 <- c()
   counter <- 1
-  for(col in dat){
-    if (!is.null(attr(col, "label"))){
+  
+  for (col in dat) {
+    if (!is.null(attr(col, "label"))) {
       v2 <- c(v2, attr(col, "label"))
     } else {
-      if (is.null( names(col))){
+      if (is.null( names(col))) {
         v2 <- c(v2, v1[counter])
       } else {
         v2 <- c(v2, names(col))
@@ -153,33 +151,76 @@ get_labels <- function(dat, defs, nfmt){
   # Assign names to list
   names(ls) <- v1
   
-  for(def in defs){
+  for (def in defs) {
     
-    if(!is.null(def$label))
+    if (!is.null(def$label))
       ls[[def$var]] <- def$label 
    
-    if(!is.null(def$n) ){
+    if (!is.null(def$n) ) {
       ls[[def$var]] <- paste0(ls[[def$var]], "\n",  nfmt(def$n))
-   }
+    }
   }
   
   return(ls)
 }
 
 
-## pt = page_template
-## rt = report_template
-create_flextable <- function(rt){
+
+create_flextable <- function(rt, font_name = "Courier New") {
 
   
   ret <- flextable(rt$data, theme_fun = NULL) %>%
-         theme_normal(fontname = "Courier New") %>%
-         set_header_labels(values=get_labels(rt$data, rt$col_defs, rt$n_format))
+         theme_normal(fontname = font_name) %>%
+         set_header_labels(values = get_labels(rt$data, 
+                                               rt$col_defs, 
+                                               rt$n_format))
   
-  for(def in rt$col_defs){
-    ret <- width(ret, j=def$var, width=def$width)  
-    ret <- align(ret, j=def$var, align = def$align, part = "body")
-    ret <- align(ret, j=def$var, align = def$label_align, part = "header")
+  # mono, serif, sans
+  fam <- case_when(font_name == "Courier New" ~ "mono",
+                   font_name == "Arial" ~ "sans",
+                   font_name == "Times New Roman" ~ "serif",
+                   font_name == "Calibri" ~ "sans")
+
+  
+  
+  # Sample data if large
+  dat <- rt$data
+  if (nrow(rt$data) > 1500)
+    dat <- fdata[sample(1:nrow(fdata), 1500), ]
+  
+  # Set default widths based on length of data
+  for (col in seq_along(dat)) {
+    
+    w <- max(strwidth(dat[[col]], units="inches", family=fam))
+    if (w > 4)
+      w <- 4
+    else if (w < .5)
+      w <- .5
+    else
+      w <- (ceiling(w * 100)/100) + .05
+    
+    #print(w)
+    
+    # Set default width
+    ret <- width(ret, j=attr(dat[col], "name"), width = w)
+    
+    # Set default alignment
+    if (class(dat[[col]]) == "character") {
+      ret <- align(ret, j=attr(dat[col], "name"), align = "left", part = "all")
+    } else {
+      ret <- align(ret, j=attr(dat[col], "name"), align = "right", part = "all")
+    }
+    
+  }
+  
+  
+  for (def in rt$col_defs) {
+    if (!is.null(def$width))
+      ret <- width(ret, j=def$var, width=def$width)  
+    if (!is.null(def$align))
+      ret <- align(ret, j=def$var, align = def$align, part = "body")
+    if (!is.null(def$label_align))
+      ret <- align(ret, j=def$var, align = def$label_align, part = "header")
   }
   
 
@@ -191,69 +232,52 @@ create_flextable <- function(rt){
 # Report Content Functions -----------------------------------------------------
 
 
-report_content <- function(){
+report_content <- function() {
   
   ret <- structure(list(), class = c("report_content", "list"))
   
-
   return(ret)
   
 }
 
 
-add_content <- function(x, object, page_break="after"){
+#' @title 
+#' Add content to a report
+#' 
+#' @description 
+#' This function adds an object to the report content list. Valid objects
+#' are a table_spec, a flextable, or a plot from ggplot.  Objects will be
+#' appended to the report in order they are added.  By default, a page break
+#' is added after the content.
+#' 
+#' @param x a report_spec to append content to
+#' @param object the object to append
+#' @param page_break whether to add a page break. Value values are "before",
+#' "after", or "none"
+#' @return The modified report_spec
+#' @example 
+#' create_report("listing_3_0.docx") %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#' 
+#' @export
+add_content <- function(x, object, page_break="after") {
   
-
-  
+  # Add page break before if requested
   if (page_break == "before")
-    x[[length(x) + 1]] <- "page_break"
+    x$content[[length(x$content) + 1]] <- "page_break"
   
-  x[[length(x) + 1]] <- object
-
+  # Add object to the content list
+  x$content[[length(x$content) + 1]] <- object
   
+  # Add page break after if requested, and by default
   if (page_break == "after")
-    x[[length(x) + 1]] <- "page_break"
-  
-
+    x$content[[length(x$content) + 1]] <- "page_break"
   
   return(x)
 }
 
 
-c <- report_content() %>%
-  add_content(1) %>%
-  add_content(2)
-
-c[length(c) + 1] <- 1
-
-c[length(c) + 1] <- 2
-
-# Usage ------------------------------------------------------------------------
-
-
-# d <- tribble(~subjid, ~name, ~age,
-#              "001-100", "Sam", 45,
-#              "001-200", "Wendy", 23
-# )
-# attr(d$age, "label") <- "Age"
-# 
-# r <- report_table(d) %>%
-#   define("subjid", "Subject ID", align="left") %>%
-#   define("name", "Subject Name", width=1.25, align = "left", label_align = "center", n=2) %>%
-#   define("age", n=5)
-#   #spanning_header(c("subjid", "name"), label="First Span")
-# 
-# 
-# 
-# # print(r)
-# 
-# ft <- create_flextable(r)
-# 
-# 
-# #ft <- width(ft, j="subjid", width=1)
-# #ft <- width(ft, j="name", width=1.25)
-# 
-# print(ft)
 
 
 

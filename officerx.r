@@ -19,11 +19,12 @@ theme_normal <- function(x, fontname = "Courier New", fontsize=10){
     fontsize(size = fontsize, part = "all") %>%
     bold(bold = FALSE, part= "all") %>%
     italic(italic = FALSE, part="all")  %>%
+    valign(valign = "bottom", part = "header") %>%
     hline_bottom(border = b_black, part = "header") 
 }
 
 
-write_report <- function(page_template, object, graphic_type="png"){
+write_report <- function(page_template, graphic_type="png"){
   
   # Write out document template
   write_page_template(page_template)
@@ -31,17 +32,15 @@ write_report <- function(page_template, object, graphic_type="png"){
   my_doc <- read_docx(page_template$file_path) %>%
             cursor_begin() %>% body_remove()
   
-  ls <- object
-  if (class(object)[1] != "report_content")
-    ls <- list(object)
+  ls <- page_template$content
+  
   
   counter <- 1
   
   for(o in ls){
   
     if (class(o)[1] == "table_spec"){
-      ft <- create_flextable(o) %>%
-            theme_normal(fontname = page_template$font_name) 
+      ft <- create_flextable(o, font_name = page_template$font_name)
       my_doc <- body_add_flextable(my_doc, ft)
     }
     else if (class(o)[1] == "flextable"){
@@ -71,7 +70,9 @@ write_report <- function(page_template, object, graphic_type="png"){
   
   unlink(file_list, recursive = TRUE, force=TRUE)
   
+  return(page_template)
 }
+
 
 
 body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style = "Normal", ... ){
@@ -91,16 +92,18 @@ body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style =
 }
 
 
-#' body_add_flextables  
+#' @title
+#' Add a list of flextables to a document body  
 #' 
+#' @description
 #' Multi-table add function for flextable.  This function avoids the memory problems associated
 #' with adding many multiple tables and creating large documents.
 #' 
 #'
 #' @param x officer document to add the flextable to
 #' @param flextable_list A list of flextables to add to the document
-#' @param pgbreak Whether to add a page break after each table. 
-#' @param other Note:  All other parameters are passed to body_add_flextable.  See documentation.
+#' @param page_break Whether to add a page break after each table. 
+#' @param ... All other parameters are passed to body_add_flextable.  See documentation.
 #' @return The original officer document with the tables from the list added to the document.
 #' @examples
 #' # Create sample data
@@ -130,7 +133,9 @@ body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style =
 #' my_doc <- body_remove(my_doc)
 #' my_doc <- body_add_flextables(my_doc, fts)
 #' print(my_doc, "test.docx")
-body_add_flextables <- function(x, flextable_list, align = "center", pos = "after", split = FALSE, pgbreak=TRUE) {
+#' @seealso [body_add_flextable()] 
+#' @export
+body_add_flextables <- function(x, flextable_list, align = "center", pos = "after", split = FALSE, page_break=TRUE) {
   
   
   # Initialize variables
@@ -159,7 +164,7 @@ body_add_flextables <- function(x, flextable_list, align = "center", pos = "afte
     x <- body_add_docx(x, src= temp_path)
     
     # Add a page break after all but the last flextable 
-    if (pgbreak == TRUE & counter < length_list){
+    if (page_break == TRUE & counter < length_list){
       x <- body_add_break(x)
     }
     
@@ -173,39 +178,44 @@ body_add_flextables <- function(x, flextable_list, align = "center", pos = "afte
   return(x)
 }
 
-#' fit_to_page  
+#' @title
+#' Fit a flextable to a specified width  
 #' 
-#' Fit a flex table to take up the amount of space specified by the \code{pgwidth} parameter.
+#' @description
+#' Fit a flex table to take up the amount of space specified by the 
+#' \code{pgwidth} parameter.  Default is 9 inches, which will take up
+#' the available body on a landscape report with 1 inch margins.
 #' 
 #' @param ft The flextable to fit.
 #' @param pgwidth The width of the available space in inches.
 #' @return The flextable returned with column widths resized. 
 #' @examples
-#'   fts <- flextable(mtcars, theme_fun=NULL)  %>%
-#'     font(fontname = "Courier New", part="all") %>%
-#'     fontsize(size = 10, part = "all") %>%
-#'     bold(bold = FALSE, part= "all") %>%
-#'     italic(italic = FALSE, part="all")  %>%
-#'     hline_bottom(border = b_black, part = "header") %>%
-#'     fit_to_page(pgwidth=5)
-#'     
-fit_to_page <- function(ft, pgwidth = 9){
+#' flextable(mtcars)  %>%
+#'   fit_to_page(pgwidth=8)
+#' @export     
+fit_to_page <- function(ft, page_width = 9){
   
   # First run autofit to get proportions
   ft_out <- autofit(ft)
   
   # Adjust based on pgwidth parameter
-  ft_out <- width(ft_out, width = dim(ft_out)$widths*pgwidth /(flextable_dim(ft_out)$widths))
+  ft_out <- width(ft_out, 
+                  width = dim(ft_out)$widths*page_width /
+                    (flextable_dim(ft_out)$widths))
   
   return(ft_out)
 }
 
-#' use_data_labels  
+#' @title
+#' Use dataframe labels as column headers in flextable
 #' 
-#' Assigns the labels associated with a dataframe to the headers in the flextable.
+#' @description
+#' Assigns the labels associated with a dataframe to the headers in 
+#' the flextable.
 #' 
 #' @param x The flextable to modify.
 #' @return The flextable returned with header labels assigned.
+#' @export
 use_data_labels <- function(x){
   
   # Extract the dataframe from the flextable body

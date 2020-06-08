@@ -8,20 +8,20 @@ library(zip)
 # Page Template Assembly Functions --------------------------------------------------------
 
 
-page_template <- function(file_path = "", orientation="landscape", font_name="Courier New", font_size=10){
+create_report <- function(file_path = "", orientation="landscape", font_name="Courier New", font_size=10){
   
-  x <- structure(list(), class = c("page_template", "list"))
+  x <- structure(list(), class = c("report_spec", "list"))
   
   if (!orientation %in% c("landscape", "portrait"))
   {
-    stop(paste("ERROR: orientation parameter on page_template() function is invalid: '", orientation,
+    stop(paste("ERROR: orientation parameter on create_report() function is invalid: '", orientation,
                "'\n\tValid values are: 'landscape' or 'portrait'."))
     
   } 
   
   if (!font_name %in% c("Courier New", "Times New Roman", "Arial", "Calibri"))
   {
-    stop(paste("ERROR: font_name parameter on page_template() function is invalid: '", font_name, 
+    stop(paste("ERROR: font_name parameter on create_report() function is invalid: '", font_name, 
                "'\n\tValid values are: 'Arial', 'Calibri', 'Courier New', and 'Times New Roman'.", sep=""))
     
   } 
@@ -31,7 +31,7 @@ page_template <- function(file_path = "", orientation="landscape", font_name="Co
   x$font_size <-font_size
   x$orientation <- orientation
   x$font_name <- font_name
-  
+  x$content <- list()
   x <- set_margins(x)
   
   return(x)
