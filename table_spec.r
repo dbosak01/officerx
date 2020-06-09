@@ -18,6 +18,8 @@ library(magrittr)
 # Formats ----------------------------------------------------------------------
 
 
+#' A function to format the population label
+#' 
 lowcase_parens <- function(x) {
   
   ret <- paste0("(n=", x, ")")
