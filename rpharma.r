@@ -1,3 +1,4 @@
+library(dplyr)
 
 #'##############################################################################
 #' @title 
@@ -68,9 +69,3 @@ add_blank_row <- function(x, ..., location="below"){
 }
 
 
-warnings()
-t <- add_blank_row(mtcars)
-
-
-g <- starwars[ , 1:11]
-f <- add_blank_row(g)
