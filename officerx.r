@@ -8,8 +8,20 @@ library(rsvg)
 
 # Flextable and Officer Extended Functions ------------------------------------
 
-
-# Normal theme for flextable.  Needs more work to eliminate defaults.
+#'##############################################################################
+#' @title
+#' Normal theme for flextable.  
+#' 
+#' @description 
+#' A theme for flextable with bold, italic, and row bands turned off.  Just 
+#' display the data and don't try to pretty it up. 
+#' (Needs more work to eliminate defaults.)
+#' @param fontname The name of the font.  Valid values are "Courier New", 
+#' "Arial", "Calibri", and "Time New Roman".  Default is "Courier New".
+#' @param fontsize The size of the font in points.
+#' @return The flextable object modified.
+#' @export
+#'##############################################################################
 theme_normal <- function(x, fontname = "Courier New", fontsize=10){
   
   b_black = fp_border(color = "black")
@@ -21,18 +33,34 @@ theme_normal <- function(x, fontname = "Courier New", fontsize=10){
     italic(italic = FALSE, part="all")  %>%
     valign(valign = "bottom", part = "header") %>%
     hline_bottom(border = b_black, part = "header") 
+  
+  return(ret)
 }
 
-
-write_report <- function(page_template, graphic_type="png"){
+#'##############################################################################
+#' @title
+#' Write a report to the file system   
+#' 
+#' @description 
+#' This function writes a report_spec object to the file system, using the 
+#' parameters provided in the object.  
+#' 
+#' @param x The report_spec object to write.
+#' @param graphic_type If the report contains graphic content, this parameter
+#' is used to specify the graphic format.  Value values are "png" and "svg".  
+#' The default is "png".
+#' @return The report spec.
+#' @export
+#'##############################################################################
+write_report <- function(x, graphic_type="png"){
   
   # Write out document template
-  write_page_template(page_template)
+  write_page_template(x)
   
-  my_doc <- read_docx(page_template$file_path) %>%
+  my_doc <- read_docx(x$file_path) %>%
             cursor_begin() %>% body_remove()
   
-  ls <- page_template$content
+  ls <- x$content
   
   
   counter <- 1
@@ -40,11 +68,11 @@ write_report <- function(page_template, graphic_type="png"){
   for(o in ls){
   
     if (class(o)[1] == "table_spec"){
-      ft <- create_flextable(o, font_name = page_template$font_name)
+      ft <- create_flextable(o, font_name = x$font_name)
       my_doc <- body_add_flextable(my_doc, ft)
     }
     else if (class(o)[1] == "flextable"){
-      ft <- theme_normal(o, fontname = page_template$font_name) 
+      ft <- theme_normal(o, fontname = x$font_name) 
       my_doc <- body_add_flextable(my_doc, ft)
     }
     else if (class(o)[1] == "gg" & graphic_type=="png"){
@@ -61,7 +89,7 @@ write_report <- function(page_template, graphic_type="png"){
     counter <- counter + 1
   }
     
-  print(my_doc, target = page_template$file_path)
+  print(my_doc, target = x$file_path)
   
   
   file_list <- list.files(path = tempdir(), 
@@ -70,12 +98,29 @@ write_report <- function(page_template, graphic_type="png"){
   
   unlink(file_list, recursive = TRUE, force=TRUE)
   
-  return(page_template)
+  return(x)
 }
 
-
-
-body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style = "Normal", ... ){
+#'##############################################################################
+#'@title
+#'Add a ggplot to the document as an SVG graphic
+#'
+#'@description
+#'This function will add a SVG format ggplot object to the report body.  Note
+#'that most versions of Word do not support embedded SVG graphics. In that case,
+#'the image will be imbedded as a png.
+#'@param x The officer object to add content to.
+#'@param value The ggplot object.
+#'@param width The desired width of the graphic.
+#'@param height The desired height of the graphic.
+#'@param res The desired resolution of the graphic.
+#'@param style The style used on the ggplot.
+#'@param ... Other parameters passed to ggsave.
+#'@return None
+#'@export
+#'##############################################################################
+body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, 
+                             style = "Normal", ... ){
   
   if( !requireNamespace("ggplot2") )
     stop("package ggplot2 is required to use this function")
@@ -84,14 +129,14 @@ body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style =
   file_path <- tempfile(fileext = ".svg")
   print(file_path)
 
-  ggsave(file=file_path, plot=value, width=width, height=height, dpi=res)
+  ggsave(file=file_path, plot=value, width=width, height=height, dpi=res, ...)
 
   body_add_img(x, src = file_path, style = style, width = width, height = height)
   
   unlink(file_path)
 }
 
-
+#'##############################################################################
 #' @title
 #' Add a list of flextables to a document body  
 #' 
@@ -135,7 +180,9 @@ body_add_gg_svg <- function( x, value, width = 6, height = 5, res = 300, style =
 #' print(my_doc, "test.docx")
 #' @seealso [body_add_flextable()] 
 #' @export
-body_add_flextables <- function(x, flextable_list, align = "center", pos = "after", split = FALSE, page_break=TRUE) {
+#'##############################################################################
+body_add_flextables <- function(x, flextable_list, align = "center", 
+                                pos = "after", split = FALSE, page_break=TRUE) {
   
   
   # Initialize variables
@@ -178,6 +225,7 @@ body_add_flextables <- function(x, flextable_list, align = "center", pos = "afte
   return(x)
 }
 
+#'##############################################################################
 #' @title
 #' Fit a flextable to a specified width  
 #' 
@@ -193,6 +241,7 @@ body_add_flextables <- function(x, flextable_list, align = "center", pos = "afte
 #' flextable(mtcars)  %>%
 #'   fit_to_page(pgwidth=8)
 #' @export     
+#'##############################################################################
 fit_to_page <- function(ft, page_width = 9){
   
   # First run autofit to get proportions
@@ -206,6 +255,7 @@ fit_to_page <- function(ft, page_width = 9){
   return(ft_out)
 }
 
+#'##############################################################################
 #' @title
 #' Use dataframe labels as column headers in flextable
 #' 
@@ -216,6 +266,7 @@ fit_to_page <- function(ft, page_width = 9){
 #' @param x The flextable to modify.
 #' @return The flextable returned with header labels assigned.
 #' @export
+#'##############################################################################
 use_data_labels <- function(x){
   
   # Extract the dataframe from the flextable body
@@ -257,18 +308,25 @@ use_data_labels <- function(x){
 }
 
 
+#'##############################################################################
 #' gen_groups
 #' 
-#' Creates group values based on a number of items and a vector of item counts per group.  
+#' Creates group values based on a number of items and a vector of item 
+#' counts per group.  
 #' 
-#' This function is used to create a vector of group values.  It can use used to dynamically subset a dataframe based on row counts rather than data values.
-#' The last_indices parameter can be used to return the indices of the last item in each group.
+#' This function is used to create a vector of group values.  It can use used to 
+#' dynamically subset a dataframe based on row counts rather than data values.
+#' The last_indices parameter can be used to return the indices of the last item 
+#' in each group.
 #' 
 #'
 #' @param tot Total number of items in return vector.
-#' @param group_cnt Number of items in each group.  This can be a single value or vector of values.  Will recycle if needed.
-#' @param last_indices TRUE or FALSE value indicating whether to return the vector of values, or a vector of row indices where the breaks occur.
-#' @return A vector of length \code{tot} broken into groups specified by \code{group_cnt}.  Groups will be identified by integers from 1 to n.
+#' @param group_cnt Number of items in each group.  This can be a single value 
+#' or vector of values.  Will recycle if needed.
+#' @param last_indices TRUE or FALSE value indicating whether to return the 
+#' vector of values, or a vector of row indices where the breaks occur.
+#' @return A vector of length \code{tot} broken into groups specified by 
+#' \code{group_cnt}.  Groups will be identified by integers from 1 to n.
 #' @examples
 #' #' gen_groups(10, 3) 
 #' >[1] 1 1 1 2 2 2 3 3 3 4
@@ -281,6 +339,7 @@ use_data_labels <- function(x){
 #' 
 #' gen_groups(12, c(3, 2, 5, 2), last_indices = TRUE) 
 #' >[1] 3 5 10 12
+#'##############################################################################
 gen_groups <- function(tot, group_cnt, last_indices = FALSE){
   
   # Create empty return vector
@@ -313,22 +372,26 @@ gen_groups <- function(tot, group_cnt, last_indices = FALSE){
   return(ret)
 }
 
-
+#'##############################################################################
 #' split_df_pages
 #' 
 #' A function to split a dataframe into pages according to vectors rows and cols  
 #' 
 #' @param df A dataframe to split
-#' @param rows A vector of row counts on which to split.  Will recycle if needed.
-#' @param cols A vector of column counts on which to split.  Will recycle if needed.
+#' @param rows A vector of row counts on which to split.  Will recycle 
+#' if needed.
+#' @param cols A vector of column counts on which to split.  Will recycle 
+#' if needed.
 #' @param idcols A vector of id columns to include on each page.
-#' @return A list of dataframes sized according to the specifications in \code{rows} and \code{cols}
+#' @return A list of dataframes sized according to the specifications 
+#' in \code{rows} and \code{cols}
 #' @examples
 #' # With row labels and no identity column
 #' split_df_pages(mtcars, 16, c(5, 6)) 
 #' 
 #' # With identity column
 #' split_df_pages(starwars,10, 5, 1)
+#'##############################################################################
 split_df_pages <- function(df, rows, cols, idcols = NULL){
   
   # Initialize list of dataframe to return

@@ -5,7 +5,7 @@ library(stringi)
 library(sjlabelled)
 library(zip)
 
-# Page Template Assembly Functions --------------------------------------------------------
+# Report Spec Assembly Functions -----------------------------------------------
 
 
 #'##############################################################################
@@ -72,14 +72,25 @@ create_report <- function(file_path = "", orientation="landscape",
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
-#' 
-#' @description 
-#' 
-#' 
-#' @examples 
-#' 
-#' 
+#' Set page margins.
+#' @description Set the page margins on the report spec object. 
+#' @details 
+#' The margins will be used for the entire report.  Units for the margins 
+#' are inches.  The default margins are 1 inch on the left and right, and 
+#' .5 inch on the top and bottom.  
+#' @param margin_top The top margin.
+#' @param margin_bottom The bottom margin.
+#' @param margin_left The left margin.
+#' @param margin_right The right margin.
+#' @return The report_spec with margins set as desired.
+#' @example 
+#' create_report("mtcars.docx", orientation="portrait") %>%
+#' set_margins(margin_top = 1, margin_bottom =1)  %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#
+#' file.show("mtcars.docx")
+#' @export
 #'##############################################################################
 set_margins <- function(x, margin_top=.5, margin_bottom=.5, 
                            margin_left=1, margin_right=1) {
@@ -110,14 +121,30 @@ set_margins <- function(x, margin_top=.5, margin_bottom=.5,
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
+#' Add a page header to the report
 #' 
 #' @description 
+#' This function adds a page header to the report.  The page header will appear
+#' on each page of the report.
 #' 
-#' 
-#' @examples 
-#' 
-#' 
+#' @details
+#' The page header may contain text on the left or right. Use the appropriate
+#' parameters to specify the desired text.  The page header may also contain 
+#' titles for the report, if the location of the 
+#' the titles has been specified as "header".  See \code{titles()} function
+#' for additional details.
+#' @param left The left page header text.  May be a single string or a vector
+#' of strings.
+#' @param right The right page header text.  May be a single string or a vector
+#' of strings.
+#' @example 
+#' create_report("mtcars.docx", orientation="portrait") %>%
+#' page_header(left = "Cars Data", right = "Study ABC")  %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#
+#' file.show("mtcars.docx")
+#' @export
 #'##############################################################################
 page_header <- function(x, left="", right=""){
   
@@ -130,14 +157,31 @@ page_header <- function(x, left="", right=""){
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
+#' Add titles to the report
 #' 
 #' @description 
+#' This function adds one or more to the report.  The titles will be added to
+#' the page template, and thus appear on each page of the report.
 #' 
-#' 
-#' @examples 
-#' 
-#' 
+#' @details
+#' The titles function accepts a set of strings of the desired title text.  
+#' The titles may be aligned center, left or right using the align parameter.  
+#' The titles may be located in the header, page body, or table according to 
+#' the location parameter.   
+#' @param x The report specification object.
+#' @param ... A set of title strings.
+#' @param location The location to place the titles in the report.  Valid values
+#' are "header", "body", or "table". 
+#' @param align The position to align the titles.  Valid values are: "left", 
+#' "right", or "center".
+#' @example 
+#' create_report("mtcars.docx", orientation="portrait") %>%
+#' titles("Cars Table Title", "All Cars")  %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#
+#' file.show("mtcars.docx")
+#' @export
 #'##############################################################################
 titles <- function(x, ..., location = "header", align="center"){
   
@@ -159,14 +203,33 @@ titles <- function(x, ..., location = "header", align="center"){
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
+#' Add footnotes to the report
 #' 
 #' @description 
+#' This function adds one or more footnotes to the report.  The footnotes will 
+#' be added to the page template, and thus appear on each page of the report.
 #' 
-#' 
-#' @examples 
-#' 
-#' 
+#' @details
+#' The footnotes function accepts a set of strings of the desired footnote text.  
+#' The footnotes may be aligned center, left or right using the align parameter.  
+#' The footnotes may be located in the footer, page body, or table according to 
+#' the location parameter. The user is responsible for adding desired symbols. 
+#' Footnote symbols will not be generated automatically.   
+#' @param x The report specification object.
+#' @param ... A set of footnotes strings.
+#' @param location The location to place the footnotes in the report.  
+#' Valid values are "header", "body", or "table". 
+#' @param align The position to align the titles.  Valid values are: "left", 
+#' "right", or "center".
+#' @example 
+#' create_report("mtcars.docx", orientation="portrait") %>%
+#' titles("Cars Table Title", "All Cars")  %>%
+#' footnotes("Source: 1974 Motor Trend US magazine") %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#
+#' file.show("mtcars.docx")
+#' @export
 #'##############################################################################
 footnotes <- function(x, ..., location = "footer", align = "left"){
   
@@ -182,14 +245,31 @@ footnotes <- function(x, ..., location = "footer", align = "left"){
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
+#' Add a page footer to the report
 #' 
 #' @description 
+#' This function adds a page footer to the report.  The page footer will appear
+#' on each page of the report.
 #' 
-#' 
-#' @examples 
-#' 
-#' 
+#' @details
+#' The page footer may contain text on the left, right, or center. 
+#' Use the appropriate parameters to specify the desired text.  The page footer 
+#' may also contain footnotes for the report, if the location of the 
+#' the footnotes has been specified as "footer".  See \code{footnotes()} 
+#' function for additional details.
+#' @param left The left page footer text.  May be a single string or a vector
+#' of strings.
+#' @param right The right page footer text.  May be a single string or a vector
+#' of strings.
+#' @example 
+#' create_report("mtcars.docx", orientation="portrait") %>%
+#' page_header(left = "Cars Data", right = "Study ABC")  %>%
+#' page_footer(left = Sys.time())  %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#
+#' file.show("mtcars.docx")
+#' @export
 #'##############################################################################
 page_footer <- function(x, left="", right="", center=""){
   
@@ -204,16 +284,21 @@ page_footer <- function(x, left="", right="", center=""){
 
 #'##############################################################################
 #' @title 
-#' Add a blank row to a data frame
+#' Print the report parameters.
 #' 
 #' @description 
-#' 
+#' A function to print the report parameters.  This function is an S3 generic
+#' function.  The class printed is "report_spec".
 #' 
 #' @examples 
-#' 
-#' 
+#' #' create_report("mtcars.docx", orientation="portrait") %>%
+#' page_header(left = "Cars Data", right = "Study ABC")  %>%
+#' page_footer(left = Sys.time())  %>%
+#' add_content(create_table(mtcars)) %>%
+#' print()
+#' @export
 #'##############################################################################
-print.page_template <- function(x, full=FALSE){
+print.report_spec <- function(x, full=FALSE){
   
   if (full)
     print.listof(x)
@@ -223,13 +308,54 @@ print.page_template <- function(x, full=FALSE){
   invisible(x)
 }
 
+#'##############################################################################
+#' @title 
+#' Add content to a report
+#' 
+#' @description 
+#' This function adds an object to the report content list. Valid objects
+#' are a table_spec, a flextable, or a plot from ggplot.  Objects will be
+#' appended to the report in order they are added.  By default, a page break
+#' is added after the content.
+#' 
+#' @param x a report_spec to append content to
+#' @param object the object to append
+#' @param page_break whether to add a page break. Value values are "before",
+#' "after", or "none"
+#' @return The modified report_spec
+#' @example 
+#' create_report("listing_3_0.docx") %>%
+#' add_content(create_table(mtcars)) %>%
+#' write_report()
+#' 
+#' @export
+#' #'##############################################################################
+add_content <- function(x, object, page_break="after") {
+  
+  # Add page break before if requested
+  if (page_break == "before")
+    x$content[[length(x$content) + 1]] <- "page_break"
+  
+  # Add object to the content list
+  x$content[[length(x$content) + 1]] <- object
+  
+  # Add page break after if requested, and by default
+  if (page_break == "after")
+    x$content[[length(x$content) + 1]] <- "page_break"
+  
+  return(x)
+}
 
-# Page Template Write Functions -------------------------------------------------
 
+
+# Report Spec Write Functions --------------------------------------------------
+
+#'##############################################################################
 #' Generate unique 8 digit keys for use as tag ids
 #' @param count The number of ids to generate
 #' @return A character vector of unique ids
 #' @noRd
+#'##############################################################################
 gen_keys <- function(count = 1){
   
   if(count < 1 | is.na(count)){
@@ -241,8 +367,21 @@ gen_keys <- function(count = 1){
   return(ret)
 }
 
+
+#'##############################################################################
+#' @description 
+#' The docx directory contains the Content Types.xml file.  The Content Types 
+#' file is created by this function.  This files exists in the top level folder.
+#' @param docx_path The path to the docx_directory
+#' @return None
+#' @noRd
+#'##############################################################################
 create_content_type <- function(docx_path){
   
+  if (!file.exists(docx_path)) {
+    
+    stop(paste("Folder does not exist:", docx_path))
+  }
   
   path <- file.path(docx_path, "[Content_Types].xml")
   
@@ -255,18 +394,30 @@ create_content_type <- function(docx_path){
   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
      <Default Extension="xml" ContentType="application/xml"/>
-     <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-     <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-     <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
-     <Override PartName="/word/webSettings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml"/>
-     <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
-     <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
-     <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
-     <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
-     <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
-     <Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-     <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-     <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+     <Override PartName="/word/document.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+     <Override PartName="/word/styles.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+     <Override PartName="/word/settings.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+     <Override PartName="/word/webSettings.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml"/>
+     <Override PartName="/word/footnotes.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>
+     <Override PartName="/word/endnotes.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>
+     <Override PartName="/word/header1.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+     <Override PartName="/word/footer1.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
+     <Override PartName="/word/fontTable.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+     <Override PartName="/word/theme/theme1.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+     <Override PartName="/docProps/core.xml" 
+      ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+     <Override PartName="/docProps/app.xml" 
+      ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
   </Types>')
   
   cat(xml, file=f)
@@ -276,7 +427,19 @@ create_content_type <- function(docx_path){
   
 }
 
+#'##############################################################################
+#' @description 
+#' The _rels subdirectory contains the .rels file.  The _rels 
+#' subdirectory and .rels file is created by this function.
+#' @param docx_path The path to the docx_directory
+#' @return None
+#' @noRd
+#'##############################################################################
 create_rels <- function(docx_path){
+  
+  if (!file.exists(docx_path)) {
+    stop(paste("Folder does not exist:", docx_path))
+  }
   
   # Create _rels subdirectory
   path_rels <- file.path(docx_path, "_rels")
@@ -307,7 +470,19 @@ create_rels <- function(docx_path){
   
 }
 
+#'##############################################################################
+#' @description 
+#' The docProps subdirectory contains the app.xml file.  The docProps 
+#' subdirectory and app.xml file is created by this function.
+#' @param docx_path The path to the docx_directory
+#' @return None
+#' @noRd
+#'##############################################################################
 create_docProps <- function(docx_path){
+  
+  if (!file.exists(docx_path)) {
+    stop(paste("Folder does not exist:", docx_path))
+  }
   
   # Create docProps subdirectory
   path_docProps <- file.path(docx_path, "docProps")
@@ -375,8 +550,19 @@ create_docProps <- function(docx_path){
   
 }
 
+# Twips per inch #
+# This setting is fixed, but used in several locations in 
+# the functions below.
 tpi <- 1440
 
+#'##############################################################################
+#' @description 
+#' This function calculates the header table widths based on the page 
+#' orientation specified in the page_template.  
+#' @param x The page_template
+#' @return A named vector of widths.
+#' @noRd
+#'##############################################################################
 get_header_widths <- function(x){
   
   pg_sz <- if (x$orientation == "landscape") 11 else 8.5
@@ -389,7 +575,14 @@ get_header_widths <- function(x){
 }
 
 
-
+#'##############################################################################
+#' @description 
+#' This function calculates the footer table widths based on the page 
+#' orientation specified in the page_template.  
+#' @param x The page_template
+#' @return A named vector of widths.
+#' @noRd
+#'##############################################################################
 get_footer_widths <- function(x){
   
   pg_sz <- if (x$orientation == "landscape") 11 else 8.5
@@ -403,7 +596,23 @@ get_footer_widths <- function(x){
 }
 
 
+#'##############################################################################
+#' @description 
+#' The header.xml file contains the information that appears on the page header.
+#' This document is dynamically constructed based on user selections such as 
+#' desired titles and page header.  The file is placed in the word
+#' subdirectory.
+#' @param x The page_template object
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_header <- function(x, word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
+  
   
   path <- file.path(word_path, "header1.xml")
   
@@ -596,7 +805,23 @@ create_header <- function(x, word_path){
   
 }
 
+
+#'##############################################################################
+#' @description 
+#' The footer.xml file contains the information that appears on the page footer.
+#' This document is dynamically constructed based on user selections such as 
+#' desired footnotes and page footers.  The file is placed in the word
+#' subdirectory.
+#' @param x The page_template object
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_footer <- function(x, word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "footer1.xml")
   
@@ -886,7 +1111,20 @@ create_footer <- function(x, word_path){
   
 }
 
+#'##############################################################################
+#' @description 
+#' The fontTable.xml file contains a list of available fonts for the document.
+#' This function creates the file.  For purposes of reporting, there are only
+#' four fonts available: Arial, Calibri, Times New Roman, and Courier New.
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_fontTable <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "fontTable.xml")
   
@@ -945,7 +1183,22 @@ create_fontTable <- function(word_path){
   
 }
 
+
+#'##############################################################################
+#' @description 
+#' The footnotes.xml file contains the footnotes for the document.  This 
+#' function creates the footnotes file.  But for purposes of the report, 
+#' footnotes are added to the footer file instead of this file so they appear
+#' on every page.
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_footnotes <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "footnotes.xml")
   
@@ -1018,7 +1271,19 @@ create_footnotes <- function(word_path){
   
 }
 
+#'##############################################################################
+#' @description 
+#' The webSettings.xml file is a file in the word subdirectory.  This function
+#' creates the webSettings.xml file.
+#' @param x 
+#' @return 
+#' @noRd
+#'##############################################################################
 create_webSettings <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "webSettings.xml")
   
@@ -1050,7 +1315,21 @@ create_webSettings <- function(word_path){
   
 }
 
+#'##############################################################################
+#' @description 
+#' The document.xml file contains the document body.  The function creates
+#' an empty document body that will be populated when content is added to the 
+#' page template.
+#' @param x The page_template object
+#' @param word_path The path to the word subdirectory
+#' @return None
+#' @noRd
+#'##############################################################################
 create_document <- function(x, word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "document.xml")
   
@@ -1134,7 +1413,21 @@ create_document <- function(x, word_path){
   close(f)
 }
 
+
+#'##############################################################################
+#' @description
+#' The styles.xml file is a file in the word subdirectory.  This function 
+#' creates styles.xml.  The styles file does not change based on content or 
+#' user parameters.  
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_styles <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "styles.xml")
   
@@ -1649,7 +1942,20 @@ create_styles <- function(word_path){
   close(f)
 }
 
+
+#'##############################################################################
+#' @description 
+#' The endNotes.xml is a file in the word subdirectory.  This function creates
+#' the endNotes file.
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_endNotes <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "endNotes.xml")
   
@@ -1722,7 +2028,21 @@ create_endNotes <- function(word_path){
   
 }
 
+
+#'##############################################################################
+#' @description 
+#' The word subdirectory has itself two more subdirectories: _rels and _theme.
+#' This function creates those subdirectories and the associated files. These 
+#' files do not change based on content or user parameters.
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_word_subdirectories <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   # Create _rels subdirectory
   path_rels <- file.path(word_path, "_rels")
@@ -1983,7 +2303,18 @@ create_word_subdirectories <- function(word_path){
   
 }
 
+#'##############################################################################
+#' Create the settings file for the page template.  The settings file will
+#' be written to the word subdirectory.
+#' @param word_path The path to the word subdirectory.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_settings <- function(word_path){
+  
+  if (!file.exists(word_path)) {
+    stop(paste("Folder does not exist:", word_path))
+  }
   
   path <- file.path(word_path, "settings.xml")
   
@@ -2110,7 +2441,21 @@ create_settings <- function(word_path){
   
 }
 
+#'##############################################################################
+#' @description
+#' Creates the Word subdirectory for the page template.  This directory contains
+#' the document body, the header file, and footer file.  The word subdirectory
+#' is where all the document content exist.  
+#' @param x The page_template object
+#' @param docx_path The path to the docx directory.  Typically a temp location.
+#' @return None
+#' @noRd
+#'##############################################################################
 create_word <- function(x, docx_path){
+  
+  if (!file.exists(docx_path)) {
+    stop(paste("Folder does not exist:", docx_path))
+  }
   
   # Create Word subdirectory
   path_word <- file.path(docx_path, "word")
@@ -2134,8 +2479,17 @@ create_word <- function(x, docx_path){
 }
 
 
-
+#'##############################################################################
+#' @description
+#' Creates a combined docx file from separate xml files and folder structure.
+#' Basically this zips everything up and renames according to the target path.
+#' @param source_path The folder path with the files to zip
+#' @param target_path The file path (.docx) for the resulting zip operation.   
+#' @return None.
+#' @noRd
+#'##############################################################################
 create_docx_file <- function(source_path, target_path){
+  
   
   # Create temporary zip file path
   zip_path <- gsub(".docx", ".zip", target_path)
@@ -2166,7 +2520,16 @@ create_docx_file <- function(source_path, target_path){
 }
 
 
-
+#'##############################################################################
+#' Writes the page template to the files system.  The page template is used
+#' by officer to start the document creation process.  The page template
+#' holds the page header/footer, and any titles/footnotes in the page 
+#' header/footer.
+#' @param x The report spec object to write.
+#' @param file_path The path to write to.
+#' @return The report spec (x) is returned invisibly.
+#' @noRd
+#'##############################################################################
 write_page_template <- function(x, file_path = ""){
   
   
@@ -2199,7 +2562,6 @@ write_page_template <- function(x, file_path = ""){
   create_word(x, path_docx)
   
   # Create zip/docx file in desired location
-  #zipr(x$file_path, file_list, recurse = TRUE)
   create_docx_file(target_path = x$file_path, source_path = path_docx)
   
   # Delete temp directory/files
