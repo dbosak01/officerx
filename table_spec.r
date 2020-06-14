@@ -288,6 +288,162 @@ create_flextable <- function(rt, font_name = "Courier New") {
   return(ret)
 }
 
+# Utilities --------------------------------------------------------------------
+
+# Declare function to calculate pages
+get_pages <- function(x, page_size){
+  
+  
+  running_sum <- 0
+  page <- 1
+  
+  get_pages_int <- Vectorize(function(x){
+    
+    if (running_sum + x > page_size) {
+      page <<- page + 1
+      running_sum <<- x
+    } else {
+      running_sum <<- running_sum + x
+    }
+    
+    return(page)
+  })
+  
+  return(get_pages_int(x))
+}
+
+
+# Declare function to calculate page breaks
+get_page_breaks <- function(x, page_size){
+  
+  
+  running_sum <- 0
+  page_breaks <- c(1)
+  counter <- 0
+  
+  get_pages_int <- Vectorize(function(x){
+    
+    counter <<- counter + 1
+    
+    if (running_sum + x > page_size) {
+      page_breaks[length(page_breaks) + 1] <<- counter
+      running_sum <<- x
+    } else {
+      running_sum <<- running_sum + x
+    }
+    
+    
+  })
+
+  
+  get_pages_int(x)
+
+  page_breaks[length(page_breaks) + 1] <- length(x) + 1
+  
+  return(page_breaks)
+}
+
+
+split_by_page <- function(df, rows, cols, idcols = NULL){
+  
+  # Initialize list of dataframe to return
+  ret <- list()
+  
+  
+  # Split the incoming dataframe according to indicies
+  split_data <- split(df, rows) 
+  
+  # Reapply the labels lost during the split
+  data_labeled <- list()
+  for(sds in seq_along(split_data)){
+    data_labeled[[sds]] <- copy_labels(split_data[[sds]], df)
+  }
+  
+  # Create vectors for vertical split
+  ls <- list()
+  for(i in seq_along(data)) {
+    
+    if (i %in% cols) {
+      ls[[length(ls) + 1]] <- c(i)
+      
+    } else {
+      
+      l <- ls[[length(ls)]]
+      l[length(l) + 1] <- i
+      ls[[length(ls)]] <- l
+      
+    }
+  }
+  
+  # Split data vertically and add each to return list
+  ret <- list()
+  for(spl in data_labeled) {
+    for (cv in ls) {
+      ret[[length(ret) + 1]] <- spl[ , cv]
+    }
+  }
+  
+  return(ret)
+}
+
+#' @param x The Table spec object
+get_table_cols <- function(x) {
+  
+  dat <- x$data
+  
+  ret <- c()
+  show_all <- FALSE 
+  if (length(x$show_cols) == 1 && x$show_cols == "all") {
+    ret <- names(dat)
+    show_all <- TRUE
+  }
+  else if (length(rt$show_cols) == 1 && x$show_cols == "all") {
+    show_all <- FALSE
+  }
+  else if (all(x$show_cols %in% names(dat))) 
+    ret <- x$show_cols
+  
+  # Dedupe and visible options
+  for (def in x$col_defs) {
+    if (def$dedupe)
+      dat[[def$var]][duplicated(dat[[def$var]])] <- ""
+    
+    if (show_all == FALSE & def$visible)
+      ret[length(ret) + 1] <- def$var_c
+    else if (show_all == TRUE & def$visible == FALSE)
+      ret <- ret[!ret %in% def$var_c]
+  }
+  
+  return(ret)
+  
+}
+
+
+stri_split("This\nthere is\nsomething", fixed ="\n")
 
 
 
+g <- c("This", "there is", "somethings\nelse2s")
+
+
+stri_split(g[3], fixed = "\n")
+
+max(nchar(g))
+
+max(nchar(g))
+
+strwidth(g, units="inches", family=fam)
+
+cell_width <- Vectorize(function(x) {
+  
+  spl <- stri_split(x, fixed = "\n")[[1]]
+  print(spl)
+  ret <- max(strwidth(spl, units = "inches", family = fam))
+  
+  return(ret)
+  
+})
+
+cell_width(g)
+
+strheight(g, units="inches", family=fam)
