@@ -60,16 +60,17 @@ write_report <- function(x, graphic_type="png"){
   my_doc <- read_docx(x$file_path) %>%
             cursor_begin() %>% body_remove()
   
-  ls <- x$content
+  bs <- get_body_size(x)
   
+  ls <- x$content
   
   counter <- 1
   
   for(o in ls){
   
     if (class(o)[1] == "table_spec"){
-      ft <- create_flextable(o, font_name = x$font_name)
-      my_doc <- body_add_flextable(my_doc, ft)
+      fts <- create_flextables(o, body_size = bs, font_name = x$font_name)  # change to flextables
+      my_doc <- body_add_flextables(my_doc, fts)
     }
     else if (class(o)[1] == "flextable"){
       ft <- theme_normal(o, fontname = x$font_name) 
@@ -100,6 +101,77 @@ write_report <- function(x, graphic_type="png"){
   
   return(x)
 }
+
+
+get_body_size <- function(rs) {
+  
+  # Assume landscape 
+  pg_h <- 8.5
+  pg_w <- 11
+  
+  # Change to portrait
+  if(rs$orientation == "portrait") {
+    pg_w <- 8.5
+    pg_h <- 11
+  }
+
+  # Calculate header and footer heights
+  h_h <- get_header_height(rs)
+  f_h <- get_footer_height(rs)
+  
+  # Calculate available space for page body
+  ret <- c(height = pg_h - rs$margin_top - rs$margin_bottom - h_h - f_h, 
+           width = pg_w - rs$margin_right - rs$margin_left)
+  
+  
+  return(ret)
+}
+
+get_header_height <- function(rs) {
+  
+  # Get height of page header
+  phdr <- rs$page_header_left
+  if(length(rs$page_header_left) < length(rs$page_header_right)) 
+    phdr <- rs$page_header_right
+    
+  hh <- sum(strheight(phdr, units = "inches", family = rs$font_family))
+  
+  # Get height of titles
+  th <- sum(strheight(rs$titles, units = "inches", family = rs$font_family))
+  
+  # Add buffer for table margins, etc.
+  buff <- .1  # Will need to adjust this
+  
+  # Add all heights
+  ret <- hh + th + buff
+  
+  return(ret)
+}
+
+get_footer_height <- function(rs) {
+  
+  # Get height of page header
+  pftr <- rs$page_footer_left
+  if(length(rs$page_footer_left) < length(rs$page_footer_right)) 
+    pftr <- rs$page_footer_right
+  if(length(pftr) < length(rs$page_footer_center))
+    pftr <- rs$page_footer_center
+  
+  fh <- sum(strheight(pftr, units = "inches", family = rs$font_family))
+  
+  # Get height of titles
+  fth <- sum(strheight(rs$footnotes, units = "inches", family = rs$font_family))
+  
+  # Add buffer for table margins, etc.
+  buff <- .1  # Need to adjust
+  
+  # Add all heights
+  ret <- fh + fth + buff
+  
+  return(ret)
+}
+
+
 
 #'##############################################################################
 #'@title

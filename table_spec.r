@@ -80,7 +80,7 @@ create_table <- function(x, n_format = upcase_parens, page_var = NULL,
 define <- function(x, var, label = NULL, col_type = NULL, 
                    align=NULL, label_align=NULL, width=NULL, 
                    visible=TRUE, n = NULL, blank_after=FALSE,
-                   dedupe=FALSE) {
+                   dedupe=FALSE, id_var = FALSE) {
   
 
   def <- list(var = deparse(substitute(var)), 
@@ -94,7 +94,8 @@ define <- function(x, var, label = NULL, col_type = NULL,
               visible = visible, 
               n = n, 
               blank_after = blank_after, 
-              dedupe=dedupe)
+              dedupe = dedupe, 
+              id_var = id_var)
   
   x$col_defs[[length(x$col_defs) + 1]] <- def
 
@@ -124,14 +125,374 @@ table_options <- function(x, first_row_blank=FALSE){
 }
 
 
+create_flextable <- function(fi) {
 
-# Create flextable (Replace this with something better)
-# ft <- flextable(final, theme_fun = NULL)  %>%
-#   theme_normal(fontname =  d$font_name) %>%
-#   use_data_labels() %>%
-#   align(j=c(1, 2), align="left", part="all") %>%
-#   align(j=c(3,4, 5), align="center", part="header") %>%
-#   width(j=c(1, 2,3, 4, 5), width=c(1.25, 2, 1, 1, 1))
+  
+  ret <- flextable(fi$data, theme_fun = NULL) %>%   
+    theme_normal(fontname = fi$font_name) %>%
+    set_header_labels(values = fi$labels)
+  
+  for(i in seq_along(fi$keys))
+  {
+    ret <- width(ret, j = i, width = fi$col_width[i])
+    ret <- align(ret, j = i, align = fi$col_align[i], part = "body") 
+    ret <- align(ret, j = i, align = fi$label_align[i], part = "header")
+    
+  }
+
+  
+
+  return(ret)
+}
+
+# Basic strategy of this function is to determine info for entire data table, 
+# then split it up according to pages.  For each page, create a flextable
+# for that page.  Collect flextables in a list and return.
+create_flextables <- function(ts, body_size, font_name = "Courier New") {
+  
+  if (ts$show_cols == "only" & length(ts$col_defs) == 0) {
+    
+    stop("ERROR: At least one column must be defined if show_cols = \"only\".")  
+  }
+  
+  family <- get_font_family(font_name)
+  
+  # Get vector of all included column names
+  # Not all columns in dataset are necessarily included 
+  # depends on show_all parameter on create_table and 
+  # visible parameter on column definitions
+  keys <- get_table_cols(ts)
+  
+  # Filter dataset by included columns
+  dat <- ts$data[ , keys]
+  
+  # Get labels
+  labels <- get_labels(dat, ts$col_defs, ts$n_format)
+  
+  # Get column alignments
+  aligns <- get_aligns(dat, ts$col_defs)
+  
+  # Get alignment for labels
+  # Follows column alignment by default
+  label_aligns <- get_label_aligns(ts$col_defs, aligns)
+  
+  
+  # Get column widths
+  widths <- get_col_widths(dat, ts$col_defs, labels, font_family = family) 
+  
+  # Get available space for table data
+  data_size <- get_data_size(body_size, widths, labels, font_family = family)
+  
+  
+  # Break columns into pages
+  wraps <- get_page_wraps(data_size, ts$col_defs, widths)
+  
+  
+  # Add blank lines as specified
+  dat <- prep_data(dat, ts$col_defs, first_blank = ts$first_row_blank)
+  
+  
+  # split rows
+  splits <- get_splits(dat, widths, data_size, font_family = family)
+  #splits <- list(dat[1:15, ])
+  
+  flx_lst <- list()
+  for(s in splits) {
+    for(pg in wraps) {
+
+      f <- flex_info(data= s[, pg], keys = pg, label=labels[pg], 
+                     col_width = widths[pg], col_align = aligns[pg], 
+                     font_name = font_name, label_align = label_aligns[pg])
+      flx_lst[[length(flx_lst) + 1]] <- create_flextable(f)
+    }
+  }
+  
+  
+  return(flx_lst)
+
+}
+
+
+
+# bs <- get_body_size(rpt)
+# fts <- create_flextables(tb, bs)
+ 
+# labels <- get_labels(tb$data, tb$col_defs, tb$n_format)
+
+
+# Flex Info --------------------------------------------------------------------
+
+flex_info <- function(data, keys, font_name, col_width, col_align,  
+                      label, label_align) {
+  
+  ret <- structure(list(), class = c("flex_info", "list"))
+  
+  ret$data <- data
+  ret$keys <- keys
+  ret$font_name <- font_name
+  ret$col_width <- col_width
+  ret$col_align <- col_align
+  ret$label <- label
+  ret$label_align <- label_align
+  
+  
+  return(ret)
+  
+}
+
+# Utilities --------------------------------------------------------------------
+
+get_splits <- function(dat, col_widths, data_size, font_family) {
+  
+  
+  rh <- .3 #strheight("Test String", units = "inches", family = font_family)
+  
+  ws <- list()
+  for (i in seq_along(dat)) {
+    
+    w_all <- strwidth(dat[[i]], units="inches", family=font_family)
+    ws[[length(ws) + 1]] <- w_all
+  }
+  
+  
+  library(qlcMatrix)
+  
+  m <- matrix(unlist(ws), ncol=length(ws), byrow=FALSE)
+  
+  #print(m)
+  
+  #lin <- ceiling(m /col_widths)
+  lin <- ceiling(t(t(m) / col_widths))
+  
+  #print(lin)
+  
+  #print(col_widths)
+  
+  # Get counts of carriage returns per cell
+  library(stringi)
+  
+  rs <- list()
+  for (col in seq_along(dat)) {
+    rs[[length(rs)+1]] <- stri_count(dat[[col]], fixed = "\n")
+  }
+  
+  r <- matrix(unlist(rs), ncol=length(rs), byrow=FALSE)
+  
+  # Add carriage returns to line counts
+  lr <- lin + r
+  
+  
+  lr[is.na(lr)] <- 0
+  
+
+  row_heights <- rowMax(lr)@x * rh
+  
+
+
+  row_pages <- get_pages(row_heights, data_size["height"])
+  
+  
+  ret <- split(dat, row_pages)
+  
+  return(ret)
+  
+}
+
+
+# b <- get_body_size(rpt)
+# l <- get_labels(tb$data, tb$col_defs, tb$n_format)
+# d <- get_data_size(b, NULL, l, "mono" )
+# w <- get_col_widths(tb$data, tb$col_defs, l, "mono")
+# p <- get_splits(tb$data, w, d, "mono")
+
+
+
+get_page_wraps <- function(data_size, defs, widths) {
+  
+  id_vars <- c()
+  for (def in defs) {
+    if (!is.null(def$id_var) && def$id_var)
+      id_vars[length(id_vars) + 1] <- def$var_c
+    
+  }
+  
+  
+  ret <- list()
+  pg <- c()
+  tw <- data_size["width"]
+
+  for (nm in names(widths)) {
+    if (length(pg) == 0 && length(id_vars) > 0) {
+      pg <- widths[id_vars]
+      names(pg) <- id_vars
+    }
+      
+    if (sum(pg, widths[nm]) < tw) {
+      pg[nm] <- widths[nm]
+      #names(pg[length(pg)]) <- nm
+    } else {
+      
+      ret[[length(ret) + 1]] <- names(pg)
+      pg <- c()
+    }
+  }
+  
+
+  if (length(pg) > 0)
+    ret[[length(ret) + 1]] <- names(pg)
+  
+  return(ret)
+  
+}
+
+# b <- get_body_size(rpt)
+# l <- get_labels(tb$data, tb$col_defs, tb$n_format)
+# d <- get_data_size(b, NULL, l, "mono" )
+# w <- get_col_widths(tb$data, tb$col_defs, l, "mono")
+# p <- get_page_wraps(d, tb$col_defs, w)
+# p
+
+prep_data <- function(dat, defs, first_blank) {
+  
+
+  ls <- c()
+  for (def in defs) {
+    if (def$blank_after)
+      ls[length(ls) + 1] <- def$var_c
+  }
+  if (length(ls) > 0) {
+    dat <- add_blank_rows(dat, .var_list = ls)
+  }
+  
+  if (first_blank)
+    dat <- add_blank_row(dat, location = "above")  
+
+  return(dat)  
+  
+}
+
+
+
+get_col_widths <- function(dat, defs, labels, font_family) {
+  
+  max_col_width = 5
+  min_col_width = .5
+  padding_buffer = .05
+  
+  dwidths <- c()  
+
+  # Set default widths based on length of data
+  for (i in seq_along(dat)) {
+    
+    w <- max(strwidth(dat[[i]], units="inches", family=font_family))
+    if (w > max_col_width)
+      w <- max_col_width
+    else if (w < min_col_width)
+      w <- min_col_width
+    else
+      w <- (ceiling(w * 100)/100) + padding_buffer
+    
+    # Determine width of words in label for this column
+    s <- stri_split(labels[[i]], fixed=" ")
+    l <- strwidth(s[[1]], units="inches", family=font_family)
+
+    # If the max word width is greater than the data width,
+    # set column width to max label word width
+    # so as not to break any words in the label
+    if (max(l) > w)
+      dwidths[length(dwidths) + 1] <- max(l)
+    else
+      dwidths[length(dwidths) + 1] <- w
+
+  }
+
+  # Set names for easy access
+  names(dwidths) <- names(dat)
+  
+  # Set default widths
+  ret = dwidths
+  
+  # Let user settings override defaults
+  for (def in defs) {
+    
+    if (def$var_c %in% names(dat) & !is.null(def$width) && def$width > 0) {
+      ret[def$var_c] <- def$width    
+    }
+    
+  }
+  
+  return(ret)
+}
+
+
+# widths not incorporated yet
+get_data_size <- function(body_size, widths, labels, font_family) {
+  
+  ppi = 72
+  
+  sz <- c()
+  for (n in labels) {
+    sz[length(sz) + 1] <- strheight(n, units="inches", family=font_family)
+    
+  }
+  
+  ret <- body_size
+  
+  ret["height"] <- ret["height"] - max(sz)
+  
+  return(ret)
+  
+}
+
+
+get_label_aligns <- function(defs, aligns) {
+  
+  
+  ret <- aligns
+  
+  for (d in defs) {
+    if (!is.null(d$label_align) & d$var_c %in% names(aligns))
+      ret[d$var_c] <-  d$label_align
+    
+  }
+  
+  return(ret)
+}
+
+
+
+get_aligns <- function(dat, defs) {
+  
+  nms <- names(dat)
+  ret <- c()
+  
+  # Get default alignments
+  # based on data type
+  # Character will go to left
+  # Others goes to right
+  for (nm in nms) {
+    
+    if (is.character(dat[[nm]]))
+      ret[length(ret) + 1] <- "left"
+    else 
+      ret[length(ret) + 1] <- "right"
+      
+  }
+  
+  # Assign names to vector for easy access to alignment values
+  names(ret) <- nms
+  
+  # Assign alignments from column definitions
+  for (d in defs) {
+    if (!is.null(d$align) & d$var_c %in% nms)
+      ret[d$var_c] <- d$align
+  }
+  
+  return(ret)
+  
+}
+
+
 
 get_labels <- function(dat, defs, nfmt){
   
@@ -169,7 +530,7 @@ get_labels <- function(dat, defs, nfmt){
     
     if (!is.null(def$label))
       ls[[def$var]] <- def$label 
-   
+    
     if (!is.null(def$n) ) {
       ls[[def$var]] <- paste0(ls[[def$var]],  nfmt(def$n))
     }
@@ -180,115 +541,6 @@ get_labels <- function(dat, defs, nfmt){
 
 
 
-create_flextable <- function(rt, font_name = "Courier New") {
-
-  if (rt$show_cols == "only" & length(rt$col_defs) == 0) {
-    
-    stop("ERROR: At least one column must be defined if show_cols = \"only\".")  
-  }
-  
-  dat <- rt$data
-  
-  # Add blank rows
-  ls <- c()
-  for (def in rt$col_defs) {
-    if (def$blank_after)
-      ls[length(ls) + 1] <- def$var_c
-  }
-  if (length(ls) > 0) {
-    dat <- add_blank_rows(dat, .var_list = ls)
-  }
-
-  
-  if (rt$first_row_blank)
-    dat <- add_blank_row(dat, location = "above")
-  
-  # show_cols option
-  keys <- c()
-  show_all <- FALSE 
-  if (length(rt$show_cols) == 1 && rt$show_cols == "all") {
-    keys <- names(dat)
-    show_all <- TRUE
-  }
-  else if (length(rt$show_cols) == 1 && rt$show_cols == "all") {
-    show_all <- FALSE
-  }
-  else if (all(rt$show_cols %in% names(dat))) 
-    keys <- rt$show_cols
-  
-  # Dedupe and visible options
-  for (def in rt$col_defs) {
-    if (def$dedupe)
-      dat[[def$var]][duplicated(dat[[def$var]])] <- ""
-    
-    if (show_all == FALSE & def$visible)
-      keys[length(keys) + 1] <- def$var_c
-    else if (show_all == TRUE & def$visible == FALSE)
-      keys <- keys[!keys %in% def$var_c]
-  }
-  
-  #print(keys)
-  
-  ret <- flextable(dat, theme_fun = NULL, col_keys = keys) %>%   
-         theme_normal(fontname = font_name) %>%
-         set_header_labels(values = get_labels(rt$data, 
-                                               rt$col_defs, 
-                                               rt$n_format))
-  
-  # mono, serif, sans
-  fam <- case_when(font_name == "Courier New" ~ "mono",
-                   font_name == "Arial" ~ "sans",
-                   font_name == "Times New Roman" ~ "serif",
-                   font_name == "Calibri" ~ "sans")
-
-  
-  
-  # Sample data if large
-  samp <- select(rt$data, keys)
-  if (nrow(rt$data) > 1500)
-    samp <- samp[sample(1:nrow(samp), 1500), ]
-
-  # Set default widths based on length of data
-  for (col in seq_along(samp)) {
-
-    w <- max(strwidth(samp[[col]], units="inches", family=fam))
-    if (w > 4)
-      w <- 4
-    else if (w < .5)
-      w <- .5
-    else
-      w <- (ceiling(w * 100)/100) + .05
-
-    #print(w)
-
-    # Set default width
-    ret <- width(ret, j=attr(samp[col], "name"), width = w)
-
-    # Set default alignment
-    if (class(samp[[col]]) == "character") {
-      ret <- align(ret, j=attr(samp[col], "name"), align = "left", part = "all")
-    } else {
-      ret <- align(ret, j=attr(samp[col], "name"), align = "right", part = "all")
-    }
-
-  }
-
-
-  for (def in rt$col_defs) {
-
-    if (!is.null(def$width) & def$visible)
-      ret <- width(ret, j=def$var, width=def$width)
-    if (!is.null(def$align) & def$visible)
-      ret <- align(ret, j=def$var, align = def$align, part = "body")
-    if (!is.null(def$label_align) & def$visible)
-      ret <- align(ret, j=def$var, align = def$label_align, part = "header")
-  }
-  
-
-  return(ret)
-}
-
-# Utilities --------------------------------------------------------------------
 
 # Declare function to calculate pages
 get_pages <- function(x, page_size){
@@ -397,17 +649,15 @@ get_table_cols <- function(x) {
     ret <- names(dat)
     show_all <- TRUE
   }
-  else if (length(rt$show_cols) == 1 && x$show_cols == "all") {
+  else if (length(x$show_cols) == 1 && x$show_cols == "all") {
     show_all <- FALSE
   }
   else if (all(x$show_cols %in% names(dat))) 
     ret <- x$show_cols
   
-  # Dedupe and visible options
+  # Deal with visible options
   for (def in x$col_defs) {
-    if (def$dedupe)
-      dat[[def$var]][duplicated(dat[[def$var]])] <- ""
-    
+
     if (show_all == FALSE & def$visible)
       ret[length(ret) + 1] <- def$var_c
     else if (show_all == TRUE & def$visible == FALSE)
@@ -419,31 +669,60 @@ get_table_cols <- function(x) {
 }
 
 
-stri_split("This\nthere is\nsomething", fixed ="\n")
-
-
-
-g <- c("This", "there is", "somethings\nelse2s")
-
-
-stri_split(g[3], fixed = "\n")
-
-max(nchar(g))
-
-max(nchar(g))
-
-strwidth(g, units="inches", family=fam)
-
-cell_width <- Vectorize(function(x) {
+prep_data2 <- function(x, col_list) {
   
-  spl <- stri_split(x, fixed = "\n")[[1]]
-  print(spl)
-  ret <- max(strwidth(spl, units = "inches", family = fam))
+  # Filter selected columns
+  dat <- x$data[ , col_list]
   
-  return(ret)
+  # Dedupe indicated columns
+  for (def in x$col_defs) {
+    if (def$dedupe)
+      dat[[def$var]][duplicated(dat[[def$var]])] <- ""
+  }
   
-})
+  # Add blank rows (may need to move this after page splits)
+  ls <- c()
+  for (def in x$col_defs) {
+    if (def$blank_after)
+      ls[length(ls) + 1] <- def$var_c
+  }
+  if (length(ls) > 0) {
+    dat <- add_blank_rows(dat, .var_list = ls)
+  }
+  
+  # Add first row blank if indicated
+  if (rt$first_row_blank)
+    dat <- add_blank_row(dat, location = "above")
+  
+  return(dat)
+}
 
-cell_width(g)
 
-strheight(g, units="inches", family=fam)
+# stri_split("This\nthere is\nsomething", fixed ="\n")
+# 
+# 
+# 
+# g <- c("This", "there is", "somethings\nelse2s")
+# 
+# 
+# stri_split(g[3], fixed = "\n")
+# 
+# max(nchar(g))
+# 
+# max(nchar(g))
+# 
+# strwidth(g, units="inches", family=fam)
+# 
+# cell_width <- Vectorize(function(x) {
+#   
+#   spl <- stri_split(x, fixed = "\n")[[1]]
+#   print(spl)
+#   ret <- max(strwidth(spl, units = "inches", family = fam))
+#   
+#   return(ret)
+#   
+# })
+# 
+# cell_width(g)
+# 
+# strheight(g, units="inches", family=fam)

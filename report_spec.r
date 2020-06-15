@@ -61,6 +61,7 @@ create_report <- function(file_path = "", orientation="landscape",
   x$font_size <-font_size
   x$orientation <- orientation
   x$font_name <- font_name
+  x$font_family <- get_font_family(font_name)
   x$content <- list()
   
   # Set default margins
@@ -344,6 +345,22 @@ add_content <- function(x, object, page_break="after") {
     x$content[[length(x$content) + 1]] <- "page_break"
   
   return(x)
+}
+
+
+# Utilities --------------------------------------------------------------------
+
+get_font_family <- function(font_name) {
+  
+  
+  # mono, serif, sans
+  fam <- case_when(font_name == "Courier New" ~ "mono",
+                   font_name == "Arial" ~ "sans",
+                   font_name == "Times New Roman" ~ "serif",
+                   font_name == "Calibri" ~ "sans")
+  
+  return(fam)
+  
 }
 
 
